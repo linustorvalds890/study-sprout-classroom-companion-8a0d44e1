@@ -2,12 +2,14 @@ import { Link, useNavigate, useRouteContext, useRouterState } from "@tanstack/re
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/lib/theme";
-import { Bell, BookOpen, CalendarDays, GraduationCap, LayoutDashboard, ListChecks, LogOut, Menu, Sparkles, TrendingUp, WifiOff, X } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, GraduationCap, LayoutDashboard, ListChecks, LogOut, Menu, ShieldCheck, Sparkles, TrendingUp, WifiOff, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { setupOffline, useOnline } from "@/lib/offline";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { useNotifications } from "@/lib/notifications";
+import { NotificationsProvider, useNotifications } from "@/lib/notifications";
+import { useQuery } from "@tanstack/react-query";
+import { isAdminQuery } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -20,11 +22,22 @@ const nav = [
   { to: "/notifications", label: "Alerts", icon: Bell },
 ] as const;
 
+const mobileNav = ["/dashboard", "/subjects", "/schedule", "/quizzes", "/study-plan"] as const;
+
 function isActive(path: string, to: string) {
   return path.startsWith(to);
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <NotificationsProvider>
+      <Shell>{children}</Shell>
+    </NotificationsProvider>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
+  const { data: isAdmin } = useQuery(isAdminQuery);
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const online = useOnline();
@@ -50,6 +63,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           {label}
         </Link>
       ))}
+      {isAdmin && (
+        <Link
+          to="/admin"
+          onClick={() => setOpen(false)}
+          className={cn(
+            "mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+            isActive(path, "/admin")
+              ? "bg-primary text-primary-foreground shadow-elegant"
+              : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          )}
+        >
+          <ShieldCheck className="h-4.5 w-4.5" />
+          Admin panel
+        </Link>
+      )}
     </nav>
   );
 
@@ -106,8 +134,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:px-8 lg:pb-10">{children}</main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t bg-card lg:hidden">
-        {nav.map(({ to, label, icon: Icon }) => (
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card lg:hidden">
+        {nav.filter((n) => (mobileNav as readonly string[]).includes(n.to)).map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
             to={to}
@@ -145,6 +173,7 @@ function NotificationBell() {
           <Button variant="ghost" size="sm" onClick={markAllRead}>Mark all read</Button>
         </div>
         <ul className="max-h-80 overflow-auto">
+          {notices.length === 0 && <li className="px-4 py-6 text-center text-sm text-muted-foreground">No announcements yet.</li>}
           {notices.slice(0, 6).map((n) => (
             <li key={n.id} className={cn("border-b px-4 py-3 last:border-0", !n.read && "bg-secondary/60")}>
               <p className="text-sm font-medium">{n.title}</p>
