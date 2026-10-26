@@ -93,7 +93,7 @@ function Index() {
         </p>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_1.1fr]">
-          <form onSubmit={submit} className="space-y-6 rounded-3xl border bg-card p-6 shadow-soft">
+          <form onSubmit={submit} className="space-y-6 self-start rounded-3xl border bg-card p-6 shadow-soft">
             <div>
               <label className="mb-2 block text-sm font-medium">Subject</label>
               <div className="flex flex-wrap gap-2">
