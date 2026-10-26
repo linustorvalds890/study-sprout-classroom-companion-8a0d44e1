@@ -17,7 +17,7 @@ export class GatewayError extends Error {
 }
 
 export async function generateStudyPlan(input: StudyPlanInput): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env['LOVABLE_API_KEY'];
   if (!apiKey) throw new GatewayError(401, "AI is not configured for this app yet.");
 
   let gatewayError: GatewayError | null = null;

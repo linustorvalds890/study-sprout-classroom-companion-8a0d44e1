@@ -43,7 +43,7 @@ function Index() {
   const run = useServerFn(createStudyPlan);
   const [subject, setSubject] = useState("Math");
   const [goal, setGoal] = useState("");
-  const [rows, setRows] = useState<Row[]>(SAMPLE.Math);
+  const [rows, setRows] = useState<Row[]>(SAMPLE["Math"] ?? []);
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -229,13 +229,13 @@ function Markdown({ text }: { text: string }) {
         flush();
         list = { ordered, items: [] };
       }
-      list.items.push((ol ?? ul)![1]);
+      list.items.push((ol ?? ul)![1] ?? "");
       continue;
     }
     flush();
     if (!line) continue;
     const h = line.match(/^#{1,4}\s+(.*)/);
-    if (h) out.push(<h2 key={out.length} className="mt-6 text-xl font-bold text-primary first:mt-0">{inline(h[1])}</h2>);
+    if (h) out.push(<h2 key={out.length} className="mt-6 text-xl font-bold text-primary first:mt-0">{inline(h[1] ?? "")}</h2>);
     else out.push(<p key={out.length}>{inline(line)}</p>);
   }
   flush();
