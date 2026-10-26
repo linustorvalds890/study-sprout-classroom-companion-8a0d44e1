@@ -2,46 +2,59 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, CloudDownload, CloudOff, CheckCircle2, Download, FileText, PlayCircle, Presentation } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { progressQuery, setLessonComplete } from "@/lib/progress";
 import { toggleSaved, useSaved } from "@/lib/offline";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubjectIcon } from "@/components/app/SubjectIcon";
-import { subjects } from "@/lib/data";
+import { formatSize, materialUrl, subjectsQuery } from "@/lib/content";
+import { EmptyState } from "@/components/app/EmptyState";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/subjects/$subjectId")({
   validateSearch: (s: Record<string, unknown>): { topic?: string } => (typeof s['topic'] === "string" ? { topic: s['topic'] } : {}),
-  loader: ({ params }) => {
+  loader: async ({ params, context }) => {
+    const subjects = await context.queryClient.ensureQueryData(subjectsQuery);
     const subject = subjects.find((s) => s.id === params.subjectId);
     if (!subject) throw notFound();
-    return { subject };
+    return { name: subject.name, description: subject.description };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
-          { title: `${loaderData.subject.name} — Studia` },
-          { name: "description", content: loaderData.subject.description },
-          { property: "og:title", content: `${loaderData.subject.name} — Studia` },
-          { property: "og:description", content: loaderData.subject.description },
+          { title: `${loaderData.name} — Studia` },
+          { name: "description", content: loaderData.description },
+          { property: "og:title", content: `${loaderData.name} — Studia` },
+          { property: "og:description", content: loaderData.description },
         ]
       : [{ title: "Subject not found — Studia" }, { name: "robots", content: "noindex" }],
   }),
   component: SubjectPage,
 });
 
-const typeIcon = { PDF: FileText, Video: PlayCircle, Slides: Presentation };
+const fileIcon = (mime: string) =>
+  mime.startsWith("video/") ? PlayCircle : mime.includes("presentation") || mime.includes("powerpoint") ? Presentation : FileText;
+
+async function openMaterial(path: string) {
+  try {
+    window.open(await materialUrl(path), "_blank", "noopener");
+  } catch {
+    toast.error("Couldn't open this file. Try again.");
+  }
+}
 
 function SubjectPage() {
-  const { subject } = Route.useLoaderData();
+  const { subjectId } = Route.useParams();
+  const { data: subjects } = useSuspenseQuery(subjectsQuery);
+  const subject = subjects.find((s) => s.id === subjectId)!;
   const search = Route.useSearch();
-  const [topicId, setTopicId] = useState(search.topic ?? subject.topics[0]!.id);
+  const [topicId, setTopicId] = useState(search.topic ?? subject.lessons[0]?.id);
   const saved = useSaved();
-  const topic = subject.topics.find((t) => t.id === topicId) ?? subject.topics[0]!;
+  const topic = subject.lessons.find((t) => t.id === topicId) ?? subject.lessons[0];
   const qc = useQueryClient();
   const { data: progress } = useQuery(progressQuery);
-  const lessonKey = `${subject.id}/${topic.id}`;
+  const lessonKey = topic?.id ?? "";
   const done = !!progress?.lessons.some((l) => l.lesson_key === lessonKey);
   const toggleDone = useMutation({
     mutationFn: () => setLessonComplete(lessonKey, !done),
@@ -63,13 +76,16 @@ function SubjectPage() {
         </div>
         <div>
           <h1 className="text-2xl font-extrabold md:text-3xl">{subject.name}</h1>
-          <p className="text-sm opacity-80">{subject.instructor} · {subject.topics.length} topics</p>
+          <p className="text-sm opacity-80">{subject.instructor ? `${subject.instructor} · ` : ""}{subject.lessons.length} lessons</p>
         </div>
       </div>
 
+      {!topic ? (
+        <EmptyState title="No lessons yet" text="Lessons for this subject will appear here once they're added." />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
         <aside className="flex gap-2 overflow-x-auto lg:flex-col">
-          {subject.topics.map((t) => (
+          {subject.lessons.map((t) => (
             <button
               key={t.id}
               onClick={() => setTopicId(t.id)}
@@ -114,7 +130,8 @@ function SubjectPage() {
               <TabsTrigger value="solutions">Solutions</TabsTrigger>
             </TabsList>
             <TabsContent value="explanation" className="mt-5 space-y-4">
-              {topic.explanation.map((p, i) => (
+              {topic.explanation.trim() === "" && <p className="text-sm text-muted-foreground">No explanation added yet.</p>}
+              {topic.explanation.split(/\n\s*\n|\n/).filter((p) => p.trim()).map((p, i) => (
                 <div key={i} className="flex gap-3">
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold text-primary">{i + 1}</span>
                   <p className="leading-relaxed">{p}</p>
@@ -122,21 +139,23 @@ function SubjectPage() {
               ))}
             </TabsContent>
             <TabsContent value="materials" className="mt-5 grid gap-3 sm:grid-cols-2">
+              {topic.materials.length === 0 && <p className="text-sm text-muted-foreground">No materials uploaded yet.</p>}
               {topic.materials.map((m) => {
-                const I = typeIcon[m.type];
+                const I = fileIcon(m.mime_type);
                 return (
-                  <div key={m.title} className="flex items-center gap-3 rounded-xl border p-4">
+                  <button key={m.id} onClick={() => openMaterial(m.file_path)} className="flex items-center gap-3 rounded-xl border p-4 text-left hover:bg-secondary/60">
                     <I className="h-8 w-8 text-primary" />
                     <div className="flex-1">
                       <p className="text-sm font-semibold">{m.title}</p>
-                      <p className="text-xs text-muted-foreground">{m.type} · {m.size}</p>
+                      <p className="text-xs text-muted-foreground">{formatSize(m.size_bytes)}</p>
                     </div>
                     <Download className="h-4 w-4 text-muted-foreground" />
-                  </div>
+                  </button>
                 );
               })}
             </TabsContent>
             <TabsContent value="solutions" className="mt-5">
+              {topic.solutions.length === 0 && <p className="text-sm text-muted-foreground">No worked solutions added yet.</p>}
               <Accordion type="single" collapsible defaultValue="s0">
                 {topic.solutions.map((s, i) => (
                   <AccordionItem key={i} value={`s${i}`}>
@@ -161,6 +180,7 @@ function SubjectPage() {
           </Tabs>
         </article>
       </div>
+      )}
     </div>
   );
 }
