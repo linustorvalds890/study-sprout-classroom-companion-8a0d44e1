@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouteContext, useRouterState } from "@tanstack/re
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/lib/theme";
-import { Bell, BookOpen, CalendarDays, GraduationCap, LayoutDashboard, ListChecks, LogOut, Menu, TrendingUp, WifiOff, X } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, GraduationCap, LayoutDashboard, ListChecks, LogOut, Menu, Sparkles, TrendingUp, WifiOff, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { setupOffline, useOnline } from "@/lib/offline";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,6 +16,7 @@ const nav = [
   { to: "/schedule", label: "Schedule", icon: CalendarDays },
   { to: "/quizzes", label: "Quizzes", icon: ListChecks },
   { to: "/progress", label: "Progress", icon: TrendingUp },
+  { to: "/study-plan", label: "Study plan", icon: Sparkles },
   { to: "/notifications", label: "Alerts", icon: Bell },
 ] as const;
 
