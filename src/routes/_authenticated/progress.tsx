@@ -4,7 +4,7 @@ import { BookCheck, Flame, Medal, Trophy } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { SubjectIcon } from "@/components/app/SubjectIcon";
-import { quizzes, subjects } from "@/lib/data";
+import { quizzesQuery, subjectsQuery } from "@/lib/content";
 import { computeStreaks, dayKey, progressQuery } from "@/lib/progress";
 import { cn } from "@/lib/utils";
 
@@ -17,22 +17,29 @@ export const Route = createFileRoute("/_authenticated/progress")({
       { property: "og:description", content: "Track completed lessons, quiz scores and study streaks over time." },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(progressQuery),
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(progressQuery),
+      context.queryClient.ensureQueryData(subjectsQuery),
+      context.queryClient.ensureQueryData(quizzesQuery),
+    ]),
   component: ProgressPage,
 });
 
 function ProgressPage() {
   const { data } = useSuspenseQuery(progressQuery);
+  const { data: subjects } = useSuspenseQuery(subjectsQuery);
+  const { data: quizzes } = useSuspenseQuery(quizzesQuery);
   const activity = [...data.lessons.map((l) => new Date(l.completed_at)), ...data.attempts.map((a) => new Date(a.taken_at))];
   const streak = computeStreaks(activity);
-  const totalLessons = subjects.reduce((n, s) => n + s.topics.length, 0);
+  const totalLessons = subjects.reduce((n, s) => n + s.lessons.length, 0);
   const avg = data.attempts.length ? Math.round(data.attempts.reduce((n, a) => n + a.percent, 0) / data.attempts.length) : 0;
   const best = data.attempts.reduce((m, a) => Math.max(m, a.percent), 0);
   const chart = data.attempts.map((a, i) => ({
     n: i + 1,
     date: new Date(a.taken_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
     score: a.percent,
-    quiz: quizzes.find((q) => q.id === a.quiz_id)?.title ?? a.quiz_id,
+    quiz: quizzes.find((q) => q.id === a.quiz_id)?.title ?? "Removed quiz",
   }));
 
   // Last 12 weeks heatmap, oldest first
@@ -48,7 +55,7 @@ function ProgressPage() {
   const stats = [
     { label: "Current streak", value: `${streak.current} day${streak.current === 1 ? "" : "s"}`, icon: Flame },
     { label: "Best streak", value: `${streak.best} day${streak.best === 1 ? "" : "s"}`, icon: Medal },
-    { label: "Lessons completed", value: `${data.lessons.length} / ${totalLessons}`, icon: BookCheck },
+    { label: "Lessons completed", value: `${Math.min(data.lessons.length, totalLessons)} / ${totalLessons}`, icon: BookCheck },
     { label: "Average quiz score", value: data.attempts.length ? `${avg}%` : "—", icon: Trophy },
   ];
 
@@ -125,14 +132,15 @@ function ProgressPage() {
         <section className="rounded-2xl bg-card p-5 shadow-card">
           <h2 className="mb-4 font-bold">Lessons by subject</h2>
           <div className="space-y-4">
+            {subjects.length === 0 && <p className="text-sm text-muted-foreground">No subjects yet.</p>}
             {subjects.map((s) => {
-              const doneCount = s.topics.filter((t) => data.lessons.some((l) => l.lesson_key === `${s.id}/${t.id}`)).length;
+              const doneCount = s.lessons.filter((t) => data.lessons.some((l) => l.lesson_key === t.id)).length;
               return (
                 <Link key={s.id} to="/subjects/$subjectId" params={{ subjectId: s.id }} className="flex items-center gap-3">
                   <span className="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-primary"><SubjectIcon icon={s.icon} className="h-4 w-4" /></span>
                   <div className="flex-1">
-                    <div className="flex justify-between text-sm"><span className="font-medium">{s.name}</span><span className="text-muted-foreground">{doneCount}/{s.topics.length}</span></div>
-                    <Progress value={(doneCount / s.topics.length) * 100} className="mt-1.5 h-1.5" />
+                    <div className="flex justify-between text-sm"><span className="font-medium">{s.name}</span><span className="text-muted-foreground">{doneCount}/{s.lessons.length}</span></div>
+                    <Progress value={s.lessons.length ? (doneCount / s.lessons.length) * 100 : 0} className="mt-1.5 h-1.5" />
                   </div>
                 </Link>
               );
@@ -149,7 +157,7 @@ function ProgressPage() {
               {[...data.attempts].reverse().slice(0, 8).map((a, i) => (
                 <li key={i} className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium">{quizzes.find((q) => q.id === a.quiz_id)?.title ?? a.quiz_id}</p>
+                    <p className="text-sm font-medium">{quizzes.find((q) => q.id === a.quiz_id)?.title ?? "Removed quiz"}</p>
                     <p className="text-xs text-muted-foreground">{new Date(a.taken_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
                   </div>
                   <span className={cn("rounded-full px-2.5 py-1 text-xs font-bold", a.percent >= 70 ? "bg-success text-success-foreground" : a.percent >= 50 ? "bg-warning text-foreground" : "bg-destructive text-destructive-foreground")}>

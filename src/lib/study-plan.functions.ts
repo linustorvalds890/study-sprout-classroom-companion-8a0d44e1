@@ -1,29 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { quizzes, subjects } from "./data";
 
 export const createStudyPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { subjectId: string; goal: string }) => {
     const subjectId = String(input?.subjectId ?? "");
     const goal = String(input?.goal ?? "").trim().slice(0, 600);
-    if (!subjects.some((s) => s.id === subjectId)) throw new Error("Please choose a subject.");
+    if (!/^[0-9a-f-]{36}$/i.test(subjectId)) throw new Error("Please choose a subject.");
     if (!goal) throw new Error("Please share your learning goal.");
     return { subjectId, goal };
   })
   .handler(async ({ data, context }) => {
-    const subject = subjects.find((s) => s.id === data.subjectId)!;
-    const [l, q] = await Promise.all([
-      context.supabase.from("lesson_completions").select("lesson_key"),
-      context.supabase.from("quiz_attempts").select("quiz_id, percent, taken_at").order("taken_at"),
+    const sb = context.supabase;
+    const [sub, l, q] = await Promise.all([
+      sb.from("subjects").select("name, lessons(id, title, sort), quizzes(id, title)").eq("id", data.subjectId).maybeSingle(),
+      sb.from("lesson_completions").select("lesson_key"),
+      sb.from("quiz_attempts").select("quiz_id, percent, taken_at").order("taken_at"),
     ]);
+    if (sub.error || !sub.data) return { ok: false as const, status: 404, error: "That subject couldn't be found." };
+    const subject = { name: sub.data.name, topics: [...sub.data.lessons].sort((a, b) => a.sort - b.sort) };
+    const subjectQuizzes = sub.data.quizzes;
     if (l.error || q.error) {
       return { ok: false as const, status: 500, error: "Couldn't load your progress. Please try again." };
     }
     const done = new Set(l.data.map((r) => r.lesson_key));
-    const completed = subject.topics.filter((t) => done.has(`${subject.id}/${t.id}`)).map((t) => t.title);
-    const remaining = subject.topics.filter((t) => !done.has(`${subject.id}/${t.id}`)).map((t) => t.title);
-    const subjectQuizzes = quizzes.filter((z) => z.subject === subject.name);
+    const completed = subject.topics.filter((t) => done.has(t.id)).map((t) => t.title);
+    const remaining = subject.topics.filter((t) => !done.has(t.id)).map((t) => t.title);
     const attempts = q.data
       .map((a) => ({ a, quiz: subjectQuizzes.find((z) => z.id === a.quiz_id) }))
       .filter((x) => x.quiz)

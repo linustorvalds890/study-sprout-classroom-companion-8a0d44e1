@@ -1,29 +1,34 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, Clock, RotateCcw, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { progressQuery, recordAttempt } from "@/lib/progress";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { quizzes, type Question } from "@/lib/data";
+import type { Question } from "@/lib/data";
+import { quizzesQuery, subjectsQuery } from "@/lib/content";
 import { isCorrect, scoreQuiz, type AnswerValue } from "@/lib/quiz";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/quizzes/$quizId")({
-  loader: ({ params }) => {
+  loader: async ({ params, context }) => {
+    const [quizzes, subjects] = await Promise.all([
+      context.queryClient.ensureQueryData(quizzesQuery),
+      context.queryClient.ensureQueryData(subjectsQuery),
+    ]);
     const quiz = quizzes.find((q) => q.id === params.quizId);
-    if (!quiz) throw notFound();
-    return { quiz };
+    if (!quiz || quiz.questions.length === 0) throw notFound();
+    return { title: quiz.title, count: quiz.questions.length, subject: subjects.find((s) => s.id === quiz.subject_id)?.name ?? "" };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
-          { title: `${loaderData.quiz.title} — Studia Quiz` },
-          { name: "description", content: `${loaderData.quiz.questions.length}-question ${loaderData.quiz.subject} quiz.` },
-          { property: "og:title", content: `${loaderData.quiz.title} — Studia Quiz` },
-          { property: "og:description", content: `${loaderData.quiz.subject} quiz with instant feedback.` },
+          { title: `${loaderData.title} — Studia Quiz` },
+          { name: "description", content: `${loaderData.count}-question ${loaderData.subject} quiz.` },
+          { property: "og:title", content: `${loaderData.title} — Studia Quiz` },
+          { property: "og:description", content: `${loaderData.subject} quiz with instant feedback.` },
         ]
       : [{ title: "Quiz not found — Studia" }, { name: "robots", content: "noindex" }],
   }),
@@ -31,7 +36,9 @@ export const Route = createFileRoute("/_authenticated/quizzes/$quizId")({
 });
 
 function QuizPlayer() {
-  const { quiz } = Route.useLoaderData();
+  const { quizId } = Route.useParams();
+  const { data: quizzes } = useSuspenseQuery(quizzesQuery);
+  const quiz = quizzes.find((q) => q.id === quizId)!;
   const [i, setI] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [left, setLeft] = useState(quiz.minutes * 60);

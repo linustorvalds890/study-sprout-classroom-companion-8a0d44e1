@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BellRing, CalendarClock, FileText, ListChecks } from "lucide-react";
+import { BellRing, CalendarClock, FileText, ListChecks, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
@@ -16,16 +16,10 @@ export const Route = createFileRoute("/_authenticated/notifications")({
   component: NotificationsPage,
 });
 
-const icons = { quiz: ListChecks, material: FileText, schedule: CalendarClock };
-
-const samples = [
-  { kind: "quiz" as const, title: "Quiz starting soon", body: "Algebra & Calculus Basics opens in 30 minutes." },
-  { kind: "material" as const, title: "New study material", body: "Prof. Omar uploaded 'Lab demo: friction'." },
-  { kind: "schedule" as const, title: "Schedule update", body: "Tomorrow's Chemistry session moved to 17:00." },
-];
+const icons = { quiz: ListChecks, material: FileText, schedule: CalendarClock, news: Megaphone };
 
 function NotificationsPage() {
-  const { notices, permission, requestPermission, push, markAllRead } = useNotifications();
+  const { notices, permission, requestPermission, markAllRead } = useNotifications();
   return (
     <div className="mx-auto max-w-3xl space-y-6 fade-up">
       <div>
@@ -49,28 +43,20 @@ function NotificationsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-card p-5 shadow-card">
-        <p className="font-semibold">Send a test alert</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {samples.map((s) => (
-            <Button key={s.kind} variant="outline" onClick={() => push(s)}>{s.title}</Button>
-          ))}
-        </div>
-      </div>
-
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Inbox</h2>
         <Button variant="ghost" size="sm" onClick={markAllRead}>Mark all read</Button>
       </div>
       <ul className="space-y-3">
+        {notices.length === 0 && <li className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card">No announcements yet.</li>}
         {notices.map((n) => {
-          const I = icons[n.kind];
+          const I = icons[n.kind] ?? Megaphone;
           return (
             <li key={n.id} className={cn("flex gap-4 rounded-2xl bg-card p-4 shadow-card", !n.read && "ring-2 ring-primary/30")}>
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary"><I className="h-5 w-5" /></div>
               <div className="flex-1">
                 <p className="font-semibold">{n.title}</p>
-                <p className="text-sm text-muted-foreground">{n.body}</p>
+                <p className="whitespace-pre-line text-sm text-muted-foreground">{n.body}</p>
               </div>
               <span className="text-xs text-muted-foreground">{n.time}</span>
             </li>

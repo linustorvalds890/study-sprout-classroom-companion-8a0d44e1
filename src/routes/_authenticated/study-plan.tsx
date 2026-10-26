@@ -3,7 +3,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, type ReactNode } from "react";
 import { Loader2, Sparkles, BookCheck, ListChecks } from "lucide-react";
 import { SubjectIcon } from "@/components/app/SubjectIcon";
-import { subjects } from "@/lib/data";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { subjectsQuery } from "@/lib/content";
+import { EmptyState } from "@/components/app/EmptyState";
 import { createStudyPlan } from "@/lib/study-plan.functions";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/study-plan")({
       { property: "og:description", content: "Get a personalized study plan based on your completed lessons and quiz scores." },
     ],
   }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(subjectsQuery),
   component: StudyPlanPage,
 });
 
@@ -23,6 +26,7 @@ type Stats = { completed: number; total: number; quizzes: number };
 
 function StudyPlanPage() {
   const run = useServerFn(createStudyPlan);
+  const { data: subjects } = useSuspenseQuery(subjectsQuery);
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "");
   const [goal, setGoal] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,6 +62,9 @@ function StudyPlanPage() {
         </p>
       </div>
 
+      {subjects.length === 0 ? (
+        <EmptyState title="No subjects yet" text="Once subjects are added you can create a study plan for them." />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <form onSubmit={submit} className="space-y-5 self-start rounded-2xl bg-card p-6 shadow-card">
           <div>
@@ -127,6 +134,7 @@ function StudyPlanPage() {
           )}
         </section>
       </div>
+      )}
     </div>
   );
 }

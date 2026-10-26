@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { events, type EventType } from "@/lib/data";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import type { EventType } from "@/lib/data";
+import { eventsQuery, subjectsQuery } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/schedule")({
@@ -13,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/schedule")({
       { property: "og:description", content: "Classes, lectures, study sessions and deadlines in one calendar." },
     ],
   }),
+  loader: ({ context }) =>
+    Promise.all([context.queryClient.ensureQueryData(eventsQuery), context.queryClient.ensureQueryData(subjectsQuery)]),
   component: SchedulePage,
 });
 
@@ -26,7 +30,11 @@ const typeStyle: Record<EventType, string> = {
 
 const dayKey = (d: Date) => d.toDateString();
 
+const hm = (d: Date) => d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
 function SchedulePage() {
+  const { data: events } = useSuspenseQuery(eventsQuery);
+  const { data: subjects } = useSuspenseQuery(subjectsQuery);
   const [today, setToday] = useState<Date | null>(null);
   useEffect(() => setToday(new Date()), []);
   const [month, setMonth] = useState(0);
@@ -38,11 +46,17 @@ function SchedulePage() {
     return events
       .filter((e) => filter === "all" || e.type === filter)
       .map((e) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() + e.dayOffset);
-        return { ...e, date: d };
+        const date = new Date(e.starts_at);
+        const end = e.ends_at ? new Date(e.ends_at) : null;
+        return {
+          ...e,
+          date,
+          start: hm(date),
+          end: end ? hm(end) : hm(date),
+          subject: subjects.find((s) => s.id === e.subject_id)?.name ?? "",
+        };
       });
-  }, [today, filter]);
+  }, [today, filter, events, subjects]);
 
   if (!today) return <div className="h-96 animate-pulse rounded-2xl bg-card" />;
 
@@ -103,7 +117,7 @@ function SchedulePage() {
                   <span className="font-semibold">{d.getDate()}</span>
                   <div className="flex flex-wrap gap-0.5 md:w-full md:flex-col">
                     {evs.map((e) => (
-                      <span key={e.id} className={cn("h-1.5 w-1.5 rounded-full md:h-auto md:w-full md:truncate md:rounded md:px-1 md:text-left md:text-[10px]", typeStyle[e.type])}>
+                      <span key={e.id} className={cn("h-1.5 w-1.5 rounded-full md:h-auto md:w-full md:truncate md:rounded md:px-1 md:text-left md:text-[10px]", (typeStyle[e.type] ?? typeStyle.class))}>
                         <span className="hidden md:inline">{e.title}</span>
                       </span>
                     ))}
@@ -119,12 +133,12 @@ function SchedulePage() {
             {dayEvents.length === 0 && <p className="text-sm text-muted-foreground">Nothing scheduled. Enjoy the free time!</p>}
             {dayEvents.map((e) => (
               <div key={e.id} className="rounded-xl border p-4">
-                <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", typeStyle[e.type])}>{e.type}</span>
+                <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", (typeStyle[e.type] ?? typeStyle.class))}>{e.type}</span>
                 <p className="mt-2 font-semibold">{e.title}</p>
                 <p className="text-xs text-muted-foreground">{e.subject}</p>
                 <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                   <span>{e.start === e.end ? `Due ${e.end}` : `${e.start} – ${e.end}`}</span>
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{e.location}</span>
+                  {e.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{e.location}</span>}
                 </div>
               </div>
             ))}
