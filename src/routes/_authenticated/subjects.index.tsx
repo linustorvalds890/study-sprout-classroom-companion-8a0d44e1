@@ -1,10 +1,13 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CloudDownload, Search } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { SubjectIcon } from "@/components/app/SubjectIcon";
-import { subjects } from "@/lib/data";
+import { EmptyState } from "@/components/app/EmptyState";
+import { subjectProgress, subjectsQuery } from "@/lib/content";
+import { progressQuery } from "@/lib/progress";
 import { useSaved } from "@/lib/offline";
 
 export const Route = createFileRoute("/_authenticated/subjects/")({
@@ -16,14 +19,20 @@ export const Route = createFileRoute("/_authenticated/subjects/")({
       { property: "og:description", content: "Browse subjects, explanations, study materials and step-by-step solutions." },
     ],
   }),
+  loader: ({ context }) =>
+    Promise.all([context.queryClient.ensureQueryData(subjectsQuery), context.queryClient.ensureQueryData(progressQuery)]),
   component: SubjectsPage,
 });
 
 function SubjectsPage() {
+  const { data: subjects } = useSuspenseQuery(subjectsQuery);
+  const { data: progress } = useSuspenseQuery(progressQuery);
+  const done = new Set(progress.lessons.map((l) => l.lesson_key));
   const [q, setQ] = useState("");
   const saved = useSaved();
+  const needle = q.toLowerCase();
   const list = subjects.filter(
-    (s) => s.name.toLowerCase().includes(q.toLowerCase()) || s.topics.some((t) => t.title.toLowerCase().includes(q.toLowerCase())),
+    (s) => s.name.toLowerCase().includes(needle) || s.lessons.some((t) => t.title.toLowerCase().includes(needle)),
   );
   return (
     <div className="space-y-6 fade-up">
@@ -44,7 +53,7 @@ function SubjectsPage() {
             {saved.map((key) => {
               const [sid, tid] = key.split("/");
               const s = subjects.find((x) => x.id === sid);
-              const t = s?.topics.find((x) => x.id === tid);
+              const t = s?.lessons.find((x) => x.id === tid);
               if (!s || !t) return null;
               return (
                 <Link key={key} to="/subjects/$subjectId" params={{ subjectId: s.id }} search={{ topic: t.id }} className="rounded-xl bg-sidebar-accent px-3 py-2 text-sm hover:bg-primary">
@@ -55,24 +64,28 @@ function SubjectsPage() {
           </div>
         </section>
       )}
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {list.map((s) => (
-          <Link key={s.id} to="/subjects/$subjectId" params={{ subjectId: s.id }} className="card-lift flex flex-col rounded-2xl bg-card p-6 shadow-card">
-            <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <SubjectIcon icon={s.icon} className="h-6 w-6" />
-            </div>
-            <h2 className="mt-4 text-lg font-bold">{s.name}</h2>
-            <p className="mt-1 flex-1 text-sm text-muted-foreground">{s.description}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {s.topics.map((t) => (
-                <span key={t.id} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">{t.title}</span>
-              ))}
-            </div>
-            <Progress value={s.progress} className="mt-5 h-1.5" />
-          </Link>
-        ))}
-        {list.length === 0 && <p className="text-muted-foreground">No subjects match “{q}”.</p>}
-      </div>
+      {subjects.length === 0 ? (
+        <EmptyState title="No subjects yet" text="Your school hasn't added any subjects yet. Check back soon." />
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {list.map((s) => (
+            <Link key={s.id} to="/subjects/$subjectId" params={{ subjectId: s.id }} className="card-lift flex flex-col rounded-2xl bg-card p-6 shadow-card">
+              <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
+                <SubjectIcon icon={s.icon} className="h-6 w-6" />
+              </div>
+              <h2 className="mt-4 text-lg font-bold">{s.name}</h2>
+              <p className="mt-1 flex-1 text-sm text-muted-foreground">{s.description}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {s.lessons.map((t) => (
+                  <span key={t.id} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">{t.title}</span>
+                ))}
+              </div>
+              <Progress value={subjectProgress(s, done)} className="mt-5 h-1.5" />
+            </Link>
+          ))}
+          {list.length === 0 && <p className="text-muted-foreground">No subjects match “{q}”.</p>}
+        </div>
+      )}
     </div>
   );
 }
