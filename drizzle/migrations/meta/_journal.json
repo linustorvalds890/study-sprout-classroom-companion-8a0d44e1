@@ -8,6 +8,13 @@
       "when": 1793053864846,
       "tag": "0000_student_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793054457646,
+      "tag": "0001_content_and_admin",
+      "breakpoints": true
     }
   ]
 }

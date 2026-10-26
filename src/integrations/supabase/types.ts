@@ -14,6 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_emails: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          read_at?: string
+          user_id?: string
+        }
+        Update: {
+          announcement_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          title: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          created_at: string
+          ends_at: string | null
+          id: string
+          location: string
+          starts_at: string
+          subject_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          location?: string
+          starts_at: string
+          subject_id?: string | null
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          location?: string
+          starts_at?: string
+          subject_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_completions: {
         Row: {
           completed_at: string
@@ -34,6 +140,85 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      lessons: {
+        Row: {
+          created_at: string
+          explanation: string
+          id: string
+          solutions: Json
+          sort: number
+          subject_id: string
+          summary: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string
+          id?: string
+          solutions?: Json
+          sort?: number
+          subject_id: string
+          summary?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          explanation?: string
+          id?: string
+          solutions?: Json
+          sort?: number
+          subject_id?: string
+          summary?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      materials: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          lesson_id: string
+          mime_type: string
+          size_bytes: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          lesson_id: string
+          mime_type?: string
+          size_bytes?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          lesson_id?: string
+          mime_type?: string
+          size_bytes?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quiz_attempts: {
         Row: {
@@ -65,12 +250,77 @@ export type Database = {
         }
         Relationships: []
       }
+      quizzes: {
+        Row: {
+          created_at: string
+          id: string
+          minutes: number
+          questions: Json
+          subject_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          minutes?: number
+          questions?: Json
+          subject_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          minutes?: number
+          questions?: Json
+          subject_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          instructor: string
+          name: string
+          sort: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          instructor?: string
+          name: string
+          sort?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          instructor?: string
+          name?: string
+          sort?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
