@@ -15,6 +15,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedProgressRouteImport } from './routes/_authenticated/progress'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
+import { Route as AuthenticatedStudyPlanRouteImport } from './routes/_authenticated/study-plan'
 import { Route as AuthenticatedQuizzesIndexRouteImport } from './routes/_authenticated/quizzes.index'
 import { Route as AuthenticatedQuizzesQuizIdRouteImport } from './routes/_authenticated/quizzes.$quizId'
 import { Route as AuthenticatedSubjectsIndexRouteImport } from './routes/_authenticated/subjects.index'
@@ -50,6 +51,11 @@ const AuthenticatedScheduleRoute = AuthenticatedScheduleRouteImport.update({
   path: '/schedule',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStudyPlanRoute = AuthenticatedStudyPlanRouteImport.update({
+  id: '/study-plan',
+  path: '/study-plan',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedQuizzesIndexRoute =
   AuthenticatedQuizzesIndexRouteImport.update({
     id: '/quizzes/',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/progress': typeof AuthenticatedProgressRoute
   '/schedule': typeof AuthenticatedScheduleRoute
+  '/study-plan': typeof AuthenticatedStudyPlanRoute
   '/quizzes/$quizId': typeof AuthenticatedQuizzesQuizIdRoute
   '/subjects/$subjectId': typeof AuthenticatedSubjectsSubjectIdRoute
   '/quizzes/': typeof AuthenticatedQuizzesIndexRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/progress': typeof AuthenticatedProgressRoute
   '/schedule': typeof AuthenticatedScheduleRoute
+  '/study-plan': typeof AuthenticatedStudyPlanRoute
   '/quizzes/$quizId': typeof AuthenticatedQuizzesQuizIdRoute
   '/subjects/$subjectId': typeof AuthenticatedSubjectsSubjectIdRoute
   '/quizzes': typeof AuthenticatedQuizzesIndexRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/progress': typeof AuthenticatedProgressRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
+  '/_authenticated/study-plan': typeof AuthenticatedStudyPlanRoute
   '/_authenticated/quizzes/$quizId': typeof AuthenticatedQuizzesQuizIdRoute
   '/_authenticated/subjects/$subjectId': typeof AuthenticatedSubjectsSubjectIdRoute
   '/_authenticated/quizzes/': typeof AuthenticatedQuizzesIndexRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/progress'
     | '/schedule'
+    | '/study-plan'
     | '/quizzes/$quizId'
     | '/subjects/$subjectId'
     | '/quizzes/'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/progress'
     | '/schedule'
+    | '/study-plan'
     | '/quizzes/$quizId'
     | '/subjects/$subjectId'
     | '/quizzes'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications'
     | '/_authenticated/progress'
     | '/_authenticated/schedule'
+    | '/_authenticated/study-plan'
     | '/_authenticated/quizzes/$quizId'
     | '/_authenticated/subjects/$subjectId'
     | '/_authenticated/quizzes/'
@@ -196,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedScheduleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/study-plan': {
+      id: '/_authenticated/study-plan'
+      path: '/study-plan'
+      fullPath: '/study-plan'
+      preLoaderRoute: typeof AuthenticatedStudyPlanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/quizzes/': {
       id: '/_authenticated/quizzes/'
       path: '/quizzes'
@@ -232,6 +251,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedProgressRoute: typeof AuthenticatedProgressRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
+  AuthenticatedStudyPlanRoute: typeof AuthenticatedStudyPlanRoute
   AuthenticatedQuizzesQuizIdRoute: typeof AuthenticatedQuizzesQuizIdRoute
   AuthenticatedSubjectsSubjectIdRoute: typeof AuthenticatedSubjectsSubjectIdRoute
   AuthenticatedQuizzesIndexRoute: typeof AuthenticatedQuizzesIndexRoute
@@ -243,6 +263,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedProgressRoute: AuthenticatedProgressRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
+  AuthenticatedStudyPlanRoute: AuthenticatedStudyPlanRoute,
   AuthenticatedQuizzesQuizIdRoute: AuthenticatedQuizzesQuizIdRoute,
   AuthenticatedSubjectsSubjectIdRoute: AuthenticatedSubjectsSubjectIdRoute,
   AuthenticatedQuizzesIndexRoute: AuthenticatedQuizzesIndexRoute,
